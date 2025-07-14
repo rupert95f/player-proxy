@@ -31,7 +31,6 @@
             z-index: 1000;
             pointer-events: none;
         }
-        /* MODIFICA CHIAVE: Classe per nascondere il debug */
         #debug.hidden {
             display: none;
         }
@@ -67,7 +66,6 @@
             }
 
             const videoId = getQueryParam('videoId');
-            // *** MODIFICA CHIAVE: Controlla il parametro di debug ***
             const debugMode = getQueryParam('debug') === 'true';
 
             if (!debugMode) {
@@ -83,13 +81,14 @@
                     width: '100%',
                     videoId: videoId,
                     playerVars: {
-                        'autoplay': 1,
+                        // *** MODIFICA CHIAVE: Disabilitato autoplay e mute per avere audio attivo al primo clic ***
+                        'autoplay': 0,
+                        'mute': 0,
                         'controls': 1,
                         'enablejsapi': 1,
                         'modestbranding': 1,
                         'rel': 0,
-                        'iv_load_policy': 3,
-                        'mute': 1
+                        'iv_load_policy': 3
                     },
                     events: {
                         'onReady': onPlayerReady,
@@ -101,9 +100,10 @@
             }
         }
 
+        // La funzione onPlayerReady ora si limita a segnalare che il player è pronto.
+        // L'utente avvierà la riproduzione manualmente.
         function onPlayerReady(event) {
-            log('Player pronto. Avvio riproduzione...');
-            event.target.playVideo();
+            log('Player pronto. In attesa di interazione utente...');
         }
         
         function onPlayerError(event) {
