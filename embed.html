@@ -1,89 +1,113 @@
 <!DOCTYPE html>
-<html lang="it">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Player Proxy</title>
+    <title>YouTube Player Proxy</title>
     <style>
-        /* Stili per assicurare che il player riempia l'intera pagina */
         body, html {
             margin: 0;
             padding: 0;
-            height: 100%;
             width: 100%;
+            height: 100%;
             overflow: hidden;
-            background-color: #000;
+            background-color: black;
+            font-family: Consolas, monospace;
+            color: lime;
         }
-        #player-container {
-            height: 100%;
+        #player {
             width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #debug {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            padding: 5px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid lime;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none; /* Rende il div non cliccabile */
         }
     </style>
 </head>
 <body>
-    <div id="player-container"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/youtube-player@5.6.0/dist/youtube-player.js"></script>
+    <!-- Area per il player -->
+    <div id="player"></div>
+    <!-- Area per i messaggi di debug -->
+    <div id="debug">Inizializzazione...</div>
 
     <script>
-        // Funzione principale per inizializzare il player
-        function initPlayer() {
-            try {
-                // 2. Legge l'ID del video dalla query string dell'URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const videoId = urlParams.get('videoId');
+        const debugDiv = document.getElementById('debug');
+        function log(message) {
+            console.log(message);
+            debugDiv.innerHTML += `<br>${message}`;
+        }
 
-                if (!videoId) {
-                    console.error("ID del video non fornito nell'URL.");
-                    document.body.innerHTML = '<h2 style="color: white; text-align: center;">ID del video mancante.</h2>';
-                    return;
-                }
+        // 1. Caricamento asincrono dell'API IFrame Player
+        log('Caricamento API YouTube...');
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-                // 3. Inizializza il player usando la libreria youtube-player
-                const player = YouTubePlayer('player-container', {
+        var player;
+
+        // 2. Funzione chiamata automaticamente quando l'API è pronta
+        function onYouTubeIframeAPIReady() {
+            log('API YouTube pronta.');
+            
+            // Funzione più robusta per leggere i parametri dall'URL
+            function getQueryParam(param) {
+                var href = window.location.href;
+                var reg = new RegExp('[?&]' + param + '=([^&#]*)', 'i');
+                var string = reg.exec(href);
+                return string ? string[1] : null;
+            }
+
+            const videoId = getQueryParam('videoId');
+
+            if (videoId) {
+                log(`ID Video trovato: ${videoId}`);
+                player = new YT.Player('player', {
+                    height: '100%',
+                    width: '100%',
                     videoId: videoId,
                     playerVars: {
-                        autoplay: 1,        // Abilita l'autoplay
-                        mute: 0,            // L'audio è attivo (l'autoplay potrebbe essere bloccato, ma l'utente può avviarlo)
-                        controls: 1,        // Mostra i controlli standard di YouTube
-                        enablejsapi: 1,     // Abilita il controllo tramite API
-                        rel: 0,             // Mostra video correlati solo dallo stesso canale
-                        iv_load_policy: 3   // Nasconde le annotazioni video
+                        'autoplay': 1,
+                        'controls': 1,
+                        'enablejsapi': 1,
+                        'modestbranding': 1,
+                        'rel': 0,
+                        'iv_load_policy': 3
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onError': onPlayerError
                     }
                 });
-
-                // 4. Inoltra gli eventi di cambio stato all'applicazione C#
-                player.on('stateChange', (event) => {
-                    if (window.chrome && window.chrome.webview) {
-                        window.chrome.webview.postMessage({
-                            event: 'stateChange',
-                            data: event.data
-                        });
-                    }
-                });
-
-                // 5. Inoltra gli errori all'applicazione C#
-                player.on('error', (event) => {
-                     if (window.chrome && window.chrome.webview) {
-                        window.chrome.webview.postMessage({
-                            event: 'error',
-                            data: event.data
-                        });
-                    }
-                });
-
-            } catch (e) {
-                console.error("Errore durante l'inizializzazione del player:", e);
-                 if (window.chrome && window.chrome.webview) {
-                    window.chrome.webview.postMessage({
-                        event: 'init_error',
-                        data: e.message
-                    });
-                }
+            } else {
+                log('ERRORE: ID Video non trovato nell\'URL.');
             }
         }
 
-        // Avvia l'inizializzazione al caricamento della pagina
-        initPlayer();
+        // 3. Funzione chiamata quando il player è pronto
+        function onPlayerReady(event) {
+            log('Player pronto. Avvio riproduzione...');
+            event.target.playVideo();
+        }
+        
+        // 4. Funzione chiamata in caso di errore del player
+        function onPlayerError(event) {
+            log(`ERRORE PLAYER: Codice ${event.data}`);
+            // I codici di errore comuni sono:
+            // 2: Richiesta contiene un parametro non valido (es. videoId errato)
+            // 5: Errore nel player HTML5
+            // 100: Video non trovato o rimosso
+            // 101, 150: Riproduzione vietata dal proprietario del video
+        }
     </script>
 </body>
 </html>
