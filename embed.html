@@ -59,7 +59,6 @@
         function onYouTubeIframeAPIReady() {
             log('API YouTube pronta.');
             
-            // Funzione più robusta per leggere i parametri dall'URL
             function getQueryParam(param) {
                 var href = window.location.href;
                 var reg = new RegExp('[?&]' + param + '=([^&#]*)', 'i');
@@ -81,7 +80,8 @@
                         'enablejsapi': 1,
                         'modestbranding': 1,
                         'rel': 0,
-                        'iv_load_policy': 3
+                        'iv_load_policy': 3,
+                        'mute': 1 /* MODIFICA CHIAVE: Aggiunto per abilitare l'autoplay */
                     },
                     events: {
                         'onReady': onPlayerReady,
@@ -102,11 +102,6 @@
         // 4. Funzione chiamata in caso di errore del player
         function onPlayerError(event) {
             log(`ERRORE PLAYER: Codice ${event.data}`);
-            // I codici di errore comuni sono:
-            // 2: Richiesta contiene un parametro non valido (es. videoId errato)
-            // 5: Errore nel player HTML5
-            // 100: Video non trovato o rimosso
-            // 101, 150: Riproduzione vietata dal proprietario del video
         }
     </script>
 </body>
