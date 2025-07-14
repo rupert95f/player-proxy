@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Player Proxy</title>
+    <style>
+        /* Stili per assicurare che il player riempia l'intera pagina */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        #player-container {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="player-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/youtube-player@5.6.0/dist/youtube-player.js"></script>
+
+    <script>
+        // Funzione principale per inizializzare il player
+        function initPlayer() {
+            try {
+                // 2. Legge l'ID del video dalla query string dell'URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const videoId = urlParams.get('videoId');
+
+                if (!videoId) {
+                    console.error("ID del video non fornito nell'URL.");
+                    document.body.innerHTML = '<h2 style="color: white; text-align: center;">ID del video mancante.</h2>';
+                    return;
+                }
+
+                // 3. Inizializza il player usando la libreria youtube-player
+                const player = YouTubePlayer('player-container', {
+                    videoId: videoId,
+                    playerVars: {
+                        autoplay: 1,        // Abilita l'autoplay
+                        mute: 0,            // L'audio è attivo (l'autoplay potrebbe essere bloccato, ma l'utente può avviarlo)
+                        controls: 1,        // Mostra i controlli standard di YouTube
+                        enablejsapi: 1,     // Abilita il controllo tramite API
+                        rel: 0,             // Mostra video correlati solo dallo stesso canale
+                        iv_load_policy: 3   // Nasconde le annotazioni video
+                    }
+                });
+
+                // 4. Inoltra gli eventi di cambio stato all'applicazione C#
+                player.on('stateChange', (event) => {
+                    if (window.chrome && window.chrome.webview) {
+                        window.chrome.webview.postMessage({
+                            event: 'stateChange',
+                            data: event.data
+                        });
+                    }
+                });
+
+                // 5. Inoltra gli errori all'applicazione C#
+                player.on('error', (event) => {
+                     if (window.chrome && window.chrome.webview) {
+                        window.chrome.webview.postMessage({
+                            event: 'error',
+                            data: event.data
+                        });
+                    }
+                });
+
+            } catch (e) {
+                console.error("Errore durante l'inizializzazione del player:", e);
+                 if (window.chrome && window.chrome.webview) {
+                    window.chrome.webview.postMessage({
+                        event: 'init_error',
+                        data: e.message
+                    });
+                }
+            }
+        }
+
+        // Avvia l'inizializzazione al caricamento della pagina
+        initPlayer();
+    </script>
+</body>
+</html>
